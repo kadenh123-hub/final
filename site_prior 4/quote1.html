@@ -173,6 +173,19 @@
 
 
 <main class="flex-1 py-16 bg-brand-light">
+  <!-- Hidden form so Netlify's build bot detects this form and provisions an inbox for it.
+       The visible multi-step UI below submits to this same form name via JS (see js/main.js). -->
+  <form name="quote-request" data-netlify="true" netlify-honeypot="bot-field" hidden>
+    <input type="text" name="fullName">
+    <input type="email" name="email">
+    <input type="tel" name="phone">
+    <input type="text" name="city">
+    <input type="text" name="services">
+    <input type="text" name="squareFootage">
+    <input type="text" name="estimatedPriceRange">
+    <input type="text" name="source">
+    <input type="text" name="bot-field">
+  </form>
   <div class="max-w-3xl mx-auto px-4 w-full">
     <div class="bg-white border border-slate-200 shadow-2xl rounded-xl p-8 sm:p-12">
       <div class="flex justify-between items-center mb-10 pb-6 border-b border-slate-100 text-xs font-bold uppercase tracking-widest">
@@ -243,9 +256,12 @@
         <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl font-black mx-auto mb-2">&#10003;</div>
         <h2 class="text-3xl font-display font-black text-brand-navy tracking-tight">Here's your estimate</h2>
         <div class="bg-slate-50 p-6 border border-slate-200 rounded-lg max-w-md mx-auto text-left space-y-4">
-          <div class="flex justify-between items-center pb-4 border-b border-slate-200"><span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Services:</span><span id="res-services" class="font-semibold text-brand-navy text-right text-sm"></span></div>
+          <div class="pb-2 border-b border-slate-200">
+            <span class="text-xs font-bold uppercase text-slate-500 tracking-wider block mb-2">Services:</span>
+            <div id="res-breakdown"></div>
+          </div>
           <div class="flex justify-between items-center pb-4 border-b border-slate-200"><span class="text-xs font-bold uppercase text-slate-500 tracking-wider">Property Size:</span><span id="res-sqft" class="font-semibold text-brand-navy text-right text-sm"></span></div>
-          <div class="flex justify-between items-center pt-2"><span class="text-xs font-bold uppercase text-brand-coral tracking-wider">Estimated Total:</span><span id="res-price" class="text-3xl font-display font-black text-brand-navy"></span></div>
+          <div class="flex justify-between items-center pt-2"><span class="text-xs font-bold uppercase text-brand-coral tracking-wider">Grand Total:</span><span id="res-price" class="text-3xl font-display font-black text-brand-navy"></span></div>
         </div>
         <p class="text-sm text-slate-600 leading-relaxed max-w-lg mx-auto">Thanks, <span id="res-name" class="font-bold text-slate-800"></span>! We'll follow up at <span id="res-email" class="font-bold text-slate-800"></span> to confirm final pricing and get you on the schedule.</p>
       </div>

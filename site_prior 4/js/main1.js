@@ -45,7 +45,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-const CRM_ENDPOINT = "https://api.therealpressure.com/leads"; // TODO: point this at your live CRM/webhook
+// Leads submit to Netlify Forms (form name "quote-request", declared in quote.html).
+// Submissions land in Netlify dashboard -> Forms, with optional email notifications you can turn on there.
+function encodeFormData(data) {
+  return Object.keys(data).map((k) => encodeURIComponent(k) + '=' + encodeURIComponent(data[k])).join('&');
+}
 let selectedServices = [];
 let squareFootage = 2500;
 
@@ -66,36 +70,58 @@ async function submitQuote() {
   if (!n || !e || !p || !c || !e.includes('@')) { document.getElementById('q-error-2').classList.remove('hidden'); return; }
   document.getElementById('q-error-2').classList.add('hidden');
 
-  let minRate = 0, maxRate = 0;
-  selectedServices.forEach((s) => {
-    if (s.includes('House')) { minRate += 0.14; maxRate += 0.35; }
-    else if (s.includes('Roof')) { minRate += 0.20; maxRate += 0.45; }
-    else if (s.includes('Concrete')) { minRate += 0.12; maxRate += 0.35; }
-    else if (s.includes('Deck')) { minRate += 0.18; maxRate += 0.40; }
-    else if (s.includes('Commercial')) { minRate += 0.25; maxRate += 0.50; }
-    else { minRate += 0.14; maxRate += 0.35; }
-  });
-  if (minRate === 0) { minRate = 0.14; maxRate = 0.35; }
+  const rateTable = [
+    { match: 'House', min: 0.14, max: 0.35 },
+    { match: 'Roof', min: 0.20, max: 0.45 },
+    { match: 'Concrete', min: 0.12, max: 0.35 },
+    { match: 'Deck', min: 0.18, max: 0.40 },
+    { match: 'Commercial', min: 0.25, max: 0.50 },
+  ];
+  const defaultRate = { min: 0.14, max: 0.35 };
 
-  const minPrice = Math.max(199, Math.round(squareFootage * minRate));
-  const maxPrice = Math.max(249, Math.round(squareFootage * maxRate));
-  const estimatedPriceRange = `$${minPrice.toLocaleString()} - $${maxPrice.toLocaleString()}`;
-  const leadPayload = { businessName: "Under Pressure", fullName: n, email: e, phone: p, city: c, services: selectedServices, squareFootage, estimatedPriceRange, source: "Website Instant Quote Funnel", timestamp: new Date().toISOString() };
+  const serviceBreakdown = selectedServices.map((s) => {
+    const rate = rateTable.find((r) => s.includes(r.match)) || defaultRate;
+    const minPrice = Math.max(199, Math.round(squareFootage * rate.min));
+    const maxPrice = Math.max(249, Math.round(squareFootage * rate.max));
+    return { name: s, minPrice, maxPrice };
+  });
+
+  const totalMin = serviceBreakdown.reduce((sum, s) => sum + s.minPrice, 0);
+  const totalMax = serviceBreakdown.reduce((sum, s) => sum + s.maxPrice, 0);
+  const estimatedPriceRange = `$${totalMin.toLocaleString()} - $${totalMax.toLocaleString()}`;
+  const leadPayload = {
+    "form-name": "quote-request",
+    fullName: n, email: e, phone: p, city: c,
+    services: selectedServices.join(', '),
+    squareFootage: String(squareFootage),
+    estimatedPriceRange,
+    priceBreakdown: serviceBreakdown.map((s) => `${s.name}: $${s.minPrice.toLocaleString()} - $${s.maxPrice.toLocaleString()}`).join(' | '),
+    source: "Website Instant Quote Funnel",
+  };
 
   const btn = document.getElementById('submit-btn');
   const origText = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = `<span>Calculating your estimate...</span>`;
   try {
-    await fetch(CRM_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(leadPayload) });
+    await fetch('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: encodeFormData(leadPayload),
+    });
   } catch (err) {
-    console.warn('Lead capture: could not reach CRM endpoint, captured client-side only.', err);
+    console.warn('Lead capture: could not reach Netlify Forms endpoint.', err);
   } finally {
     btn.disabled = false;
     btn.innerHTML = origText;
   }
 
-  document.getElementById('res-services').innerText = selectedServices.join(', ');
+  const breakdownEl = document.getElementById('res-breakdown');
+  breakdownEl.innerHTML = serviceBreakdown.map((s) => `
+    <div class="flex justify-between items-center py-2 border-b border-slate-100 last:border-0">
+      <span class="text-sm font-semibold text-slate-700">${s.name}</span>
+      <span class="text-sm font-bold text-brand-navy">$${s.minPrice.toLocaleString()} - $${s.maxPrice.toLocaleString()}</span>
+    </div>`).join('');
   document.getElementById('res-sqft').innerText = `${squareFootage.toLocaleString()} SQ FT`;
   document.getElementById('res-price').innerText = estimatedPriceRange;
   document.getElementById('res-name').innerText = n.split(' ')[0];
